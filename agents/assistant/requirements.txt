@@ -1,0 +1,5 @@
+google-adk[a2a,extensions]>=1.32.0
+mcp
+pyyaml
+uvicorn
+httpx

@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Combined image: Studio Workbench (/workbench/*) + studio-assistant agent.
+# The workbench reverse-proxies A2A traffic to the agent running in-process.
+
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY agents/assistant/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY agents/assistant/main.py .
+COPY agents/assistant/callbacks.py .
+COPY agents/assistant/event_converter.py .
+COPY agents/assistant/prompt.md .
+COPY agents/assistant/prompts/ /app/prompts/
+COPY agents/assistant/skills/ /app/skills/
+
+COPY workbench/ /app/workbench/
+
+EXPOSE 8080 8090
+
+COPY <<'EOF' /app/entrypoint.sh
+#!/bin/sh
+python main.py &
+python -m workbench.app &
+wait -n
+EOF
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]

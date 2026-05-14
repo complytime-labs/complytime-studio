@@ -1,0 +1,94 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Canonical agent definition — framework-agnostic source of truth.
+# Helm renders this into a kagent Declarative Agent CRD.
+# The agentDirectory in values.yaml MUST mirror the a2a block below.
+
+name: studio-assistant
+description: >-
+  ComplyTime Studio assistant — audit preparation, evidence synthesis,
+  cross-framework coverage analysis, and compliance guidance
+
+prompt: prompt.md
+
+# ---------------------------------------------------------------------------
+# Skills — reusable knowledge packs injected into agent context at runtime.
+#
+# Internal skills live in skills/<name>/SKILL.md (this repo).
+# External skills reference a git repo + path; kagent clones and mounts them.
+#
+# To add a new internal skill:
+#   1. Create skills/<name>/SKILL.md with frontmatter (name, description)
+#   2. Add "- path: skills/<name>" below
+#   3. Run: make sync-prompts
+#
+# To add an external skill:
+#   1. Add a repo/ref/path entry below
+#   2. Optionally register in values.yaml externalSkills for Helm visibility
+# ---------------------------------------------------------------------------
+skills:
+  # Internal skills (this repo)
+  - path: skills/studio-audit        # Classification criteria, coverage mapping, data access reference
+  - path: skills/posture-check        # Pre-audit readiness — cadence, provenance, method, evidence fitness
+  # External skills
+  - repo: https://github.com/rhaml-23/prompt.git
+    ref: main
+    path: skills/research.md
+  - repo: https://github.com/rhaml-23/prompt.git
+    ref: main
+    path: skills/gemara.md
+
+# ---------------------------------------------------------------------------
+# Model — default provider/name. Helm values (agents.assistant.model.*) take
+# precedence at deploy time. See values.yaml agents.<name>.model.
+# ---------------------------------------------------------------------------
+model:
+  provider: AnthropicVertexAI
+  name: claude-opus-4-6
+
+# ---------------------------------------------------------------------------
+# MCP — Model Context Protocol servers the agent can call as tools.
+#
+# Each server is deployed as a kagent MCPServer CRD (see mcpServers in
+# values.yaml). The agent references servers by name and whitelists tools.
+#
+# To connect a new MCP server:
+#   1. Add the server to values.yaml mcpServers with image + enabled flag
+#   2. Add a server entry below with the tools the agent should access
+#   3. If the server needs user auth, add allowedHeaders: [Authorization]
+#
+# Transport: all platform MCP servers use stdio (static credentials).
+# HTTP transport is available for servers requiring per-request auth.
+# ---------------------------------------------------------------------------
+mcp:
+  - server: studio-gemara-mcp
+    tools:
+      - validate_gemara_artifact   # Validate artifact YAML against CUE schema
+      - migrate_gemara_artifact    # Migrate v0 artifacts to v1 schema
+  - server: studio-mcp
+    resources:
+      - studio://policies
+      - studio://evidence
+      - studio://posture
+      - studio://audit-logs
+      - studio://mappings
+      - studio://catalogs
+      - studio://threats
+      - studio://risks
+    tools:
+      - ingest_evidence            # Insert evidence rows (optional workflows)
+      - save_draft_audit_log       # Persist validated AuditLog YAML as draft
+
+# ---------------------------------------------------------------------------
+# A2A — Agent-to-Agent protocol skills advertised on the agent card.
+# The gateway serves these via GET /api/agents (from values.yaml agentDirectory).
+# Keep the id, name, description, and tags in sync with values.yaml.
+# ---------------------------------------------------------------------------
+a2a:
+  skills:
+    - id: compliance-assistant
+      name: Studio Assistant
+      description: >-
+        Audit preparation, evidence synthesis, cross-framework coverage
+        analysis, policy guidance, and AuditLog generation.
+      tags: [assistant, audit, compliance, coverage, evidence, layer-7]
