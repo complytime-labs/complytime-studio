@@ -174,14 +174,14 @@ def build_tools() -> list:
             tools.append(
                 McpToolset(
                     connection_params=StreamableHTTPConnectionParams(url=STUDIO_MCP_URL),
-                    tool_filter=["ingest_evidence", "save_draft_audit_log"],
+                    tool_filter=["query_evidence", "save_draft_audit_log"],
                     use_mcp_resources=True,
                 )
             )
             logger.info("studio-mcp toolset registered (url=%s)", STUDIO_MCP_URL)
         else:
             logger.error(
-                "studio-mcp unreachable — ingest_evidence/save_draft_audit_log "
+                "studio-mcp unreachable — query_evidence/save_draft_audit_log "
                 "and studio:// resources will not be available"
             )
 

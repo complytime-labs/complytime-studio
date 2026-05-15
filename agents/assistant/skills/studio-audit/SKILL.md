@@ -54,7 +54,7 @@ Multiple controls mapping to the same external entry: use strongest coverage. No
 
 Read JSON via **`studio://`** resources (see agent prompt). Do **not** execute SQL.
 
-**ingest_evidence**: Insert evidence rows when the user explicitly needs new rows loaded; each row needs `policy_id`, `target_id`, `control_id`, `collected_at`, and other fields expected by the platform store.
+**query_evidence**: Read evidence rows filtered by `policy_id`. Evidence is ingested via the REST API or async NATS pipeline, not by agents.
 
 **save_draft_audit_log**: After validation, persist draft YAML — `policy_id`, `yaml`, optional `agent_reasoning` (JSON string), optional `model` / `prompt_version`.
 

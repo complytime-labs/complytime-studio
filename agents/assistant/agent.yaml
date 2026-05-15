@@ -76,7 +76,7 @@ mcp:
       - studio://threats
       - studio://risks
     tools:
-      - ingest_evidence            # Insert evidence rows (optional workflows)
+      - query_evidence             # Read evidence rows filtered by policy
       - save_draft_audit_log       # Persist validated AuditLog YAML as draft
 
 # ---------------------------------------------------------------------------
