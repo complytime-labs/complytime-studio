@@ -10,9 +10,15 @@ WORKDIR /app
 COPY agents/assistant/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY agents/assistant/main.py .
-COPY agents/assistant/callbacks.py .
-COPY agents/assistant/event_converter.py .
+COPY agents/assistant/graph.py .
+COPY agents/assistant/state.py .
+COPY agents/assistant/router.py .
+COPY agents/assistant/nodes.py .
+COPY agents/assistant/tools.py .
+COPY agents/assistant/validation.py .
+COPY agents/assistant/delegate.py .
+COPY agents/assistant/prompt.py .
+COPY agents/assistant/langgraph.json .
 COPY agents/assistant/prompt.md .
 COPY agents/assistant/prompts/ /app/prompts/
 COPY agents/assistant/skills/ /app/skills/
@@ -22,8 +28,8 @@ COPY workbench/ /app/workbench/
 EXPOSE 8080 8090
 
 COPY <<'EOF' /app/entrypoint.sh
-#!/bin/sh
-python main.py &
+#!/bin/bash
+uvicorn graph:graph --host 0.0.0.0 --port 8080 &
 python -m workbench.app &
 wait -n
 EOF
