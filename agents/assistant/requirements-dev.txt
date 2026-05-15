@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Development and test dependencies for studio-assistant.
+# Install with: pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+pytest
+pytest-asyncio

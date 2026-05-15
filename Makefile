@@ -4,7 +4,7 @@ ASSISTANT_IMAGE ?= studio-assistant
 ASSISTANT_TAG ?= local
 CONTAINER_RUNTIME ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
 
-.PHONY: sync-skills image test lint clean
+.PHONY: sync-skills image test test-integration lint clean
 
 sync-skills:
 	@rsync -a --delete --exclude='.gitkeep' skills/ agents/assistant/skills/
@@ -17,6 +17,10 @@ image: sync-skills
 
 test:
 	cd agents/assistant && python -m pytest -v
+	python -m pytest tests/ -v --ignore=tests/test_a2a_contract.py
+
+test-integration: ## Run A2A contract tests against a live agent (AGENT_URL required)
+	AGENT_URL=$${AGENT_URL:-http://localhost:8080} python -m pytest tests/test_a2a_contract.py -v
 
 lint:
 	cd agents/assistant && python -m mypy --ignore-missing-imports .
