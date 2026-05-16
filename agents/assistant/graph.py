@@ -99,9 +99,14 @@ def _build_checkpointer():
         logger.warning("POSTGRES_URL not set — running without persistent checkpointer")
         return None
     try:
-        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        from psycopg_pool import ConnectionPool
+        from langgraph.checkpoint.postgres import PostgresSaver
+        import psycopg
 
-        return AsyncPostgresSaver.from_conn_string(POSTGRES_URL)
+        pool = ConnectionPool(conninfo=POSTGRES_URL)
+        with psycopg.connect(POSTGRES_URL, autocommit=True) as setup_conn:
+            PostgresSaver(conn=setup_conn).setup()
+        return PostgresSaver(conn=pool)
     except Exception as e:
         logger.error("Failed to create PostgresSaver: %s", e)
         return None
