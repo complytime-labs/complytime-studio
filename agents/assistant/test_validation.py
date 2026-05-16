@@ -2,8 +2,6 @@
 
 """Unit tests for the validation gate."""
 
-import pytest
-
 from validation import MAX_VALIDATION_ATTEMPTS, route_after_validation
 
 

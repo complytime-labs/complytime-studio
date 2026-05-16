@@ -4,7 +4,6 @@
 # Uses httpx ASGI transport — no running server needed.
 
 import json
-import os
 
 import httpx
 import pytest

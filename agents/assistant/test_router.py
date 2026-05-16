@@ -2,8 +2,6 @@
 
 """Unit tests for the intent router."""
 
-import pytest
-
 from router import AUDIT_KEYWORDS, POSTURE_KEYWORDS, classify_intent, router_node
 
 

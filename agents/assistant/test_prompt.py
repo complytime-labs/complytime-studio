@@ -5,7 +5,6 @@
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 import yaml
 
 import prompt as prompt_module
