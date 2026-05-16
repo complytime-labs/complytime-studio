@@ -27,9 +27,36 @@ Notifications are a **presentation concern**, not a data platform concern. The g
 
 The workbench is the preferred first candidate. It already has a WebSocket/SSE path to the UI for chat streaming and could reuse that channel for notifications.
 
+## NATS Wiring Plan
+
+The gateway already publishes to NATS for ingest (`core.ingest`). Extend with event subjects:
+
+| Subject | Publisher | Payload |
+|:--|:--|:--|
+| `core.events.evidence_arrival` | Gateway (post-ingest worker) | `{policy_id, artifact_type, job_id}` |
+| `core.events.posture_change` | Gateway (certifier pipeline) | `{policy_id, previous_rate, current_rate}` |
+| `core.events.draft_created` | Gateway (draft audit log handler) | `{draft_id, policy_id}` |
+
+The workbench subscribes to `core.events.>` and stores notifications in memory (capped at 1000 entries). The UI polls the REST API below.
+
+**MVP scope (current):** In-memory store, REST polling. Notifications are ephemeral signals — the underlying data (evidence, posture, drafts) is already persisted in core. Restarts clear the notification list; this is acceptable for single-replica workbench.
+
+**Future (evaluate when needed):** Persistent `workbench.notifications` table, SSE/WebSocket push to UI, multi-channel delivery (email, Slack).
+
+### Workbench notification API
+
+```
+GET    /workbench/notifications
+GET    /workbench/notifications/unread-count
+PATCH  /workbench/notifications/{id}/read
+```
+
+Studio UI notification components update to call `/workbench/*` paths instead of `/api/*`.
+
 ## Consequences
 
-- Gateway publishes NATS events (`core.evidence.*`, `core.draft.*`) — no change needed.
-- UI notification components remain in `studio-ui` but are inert until a notification source is wired.
-- Migration `013_drop_notifications.sql` removed the table. A new table in the workbench's own storage (or a lightweight in-memory store) would replace it.
-- No timeline commitment. This is a "when needed" decision.
+- Gateway publishes NATS events — no notification state, no read/unread tracking.
+- Workbench owns notification storage, formatting, severity classification, and delivery.
+- UI notification components call `/workbench/notifications*` endpoints.
+- MVP uses in-memory storage — no migration, no persistence across restarts.
+- Migration `013_drop_notifications.sql` removed the gateway table. A persistent `workbench.notifications` table is deferred until multi-replica or compliance requirements emerge.

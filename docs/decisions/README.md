@@ -11,6 +11,7 @@ Cross-cutting platform decisions live in [complytime-core](https://github.com/co
 | 0020 | [Agent Artifact Delivery](agent-artifact-delivery.md) | Phase 1 implemented; Phase 2 deferred | 2026-04-18 |
 | 0029 | [Notifications Belong Outside the Gateway](notifications-outside-gateway.md) | Accepted | 2026-05-14 |
 | 0030 | [Recommendation Engine Deferred to Workbench](recommendation-engine-deferred.md) | Deferred | 2026-05-14 |
+| 0036 | [Programs Migration to Workbench](programs-migration-to-workbench.md) | Accepted | 2026-05-16 |
 
 ## Historical / Obsolete
 

@@ -6,13 +6,13 @@ from pathlib import Path
 import httpx
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "workbench"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 @pytest.fixture
 def workbench_client() -> httpx.AsyncClient:
     """Async test client for the workbench Starlette app (ASGI transport)."""
-    from app import create_app
+    from workbench.app import create_app
 
     app = create_app()
     transport = httpx.ASGITransport(app=app)

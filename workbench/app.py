@@ -6,22 +6,41 @@ Provides agent-support endpoints under /workbench/*:
   - A2A routing to agents
   - Agent directory
   - Chat conversation state
+  - Notifications (NATS-backed core.events; ADR #0029)
   - Gemara validate/migrate (direct MCP)
   - OCI publish and registry browse (direct MCP)
 
 Run standalone or mount routes into an existing Starlette app.
 """
 
+import asyncio
 import json
 import logging
 import os
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator
 
 import httpx
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Mount, Route
+
+from .migrate import run_migrations
+from .notifications import (
+    list_notifications,
+    mark_read,
+    start_nats_subscriber,
+    unread_count,
+)
+from .programs import (
+    ENV_POSTGRES_URL,
+    create_program,
+    delete_program,
+    get_program,
+    list_programs,
+    update_program,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +234,18 @@ async def registry_repositories(request: Request) -> JSONResponse:
     )
 
 
+async def recommendations_stub(request: Request) -> JSONResponse:
+    """Stub: recommendation engine deferred (ADR #0030)."""
+    return JSONResponse([], status_code=200)
+
+
+async def recommendation_action_stub(request: Request) -> JSONResponse:
+    """Stub: attach/dismiss deferred (ADR #0030)."""
+    return JSONResponse(
+        {"error": "recommendation engine not yet implemented"}, status_code=501
+    )
+
+
 workbench_routes = [
     Route("/agents", agent_directory, methods=["GET"]),
     Route("/a2a/{name:path}", a2a_proxy, methods=["GET", "POST", "PUT", "PATCH", "DELETE"]),
@@ -224,14 +255,36 @@ workbench_routes = [
     Route("/migrate", migrate_artifact, methods=["POST"]),
     Route("/publish", publish_bundle, methods=["POST"]),
     Route("/registry/repositories", registry_repositories, methods=["GET"]),
+    Route("/programs", list_programs, methods=["GET"]),
+    Route("/programs", create_program, methods=["POST"]),
+    Route("/programs/{id}", get_program, methods=["GET"]),
+    Route("/programs/{id}", update_program, methods=["PUT"]),
+    Route("/programs/{id}", delete_program, methods=["DELETE"]),
+    Route("/programs/{id}/recommendations/{policy_id}/attach", recommendation_action_stub, methods=["POST"]),
+    Route("/programs/{id}/recommendations/{policy_id}/dismiss", recommendation_action_stub, methods=["POST"]),
+    Route("/programs/{id}/recommendations", recommendations_stub, methods=["GET"]),
+    Route("/notifications/unread-count", unread_count, methods=["GET"]),
+    Route("/notifications/{id}/read", mark_read, methods=["PATCH"]),
+    Route("/notifications", list_notifications, methods=["GET"]),
 ]
 
 workbench_mount = Mount("/workbench", routes=workbench_routes)
 
 
+@asynccontextmanager
+async def _lifespan(app: Starlette) -> AsyncGenerator[None, None]:
+    dsn = os.environ.get(ENV_POSTGRES_URL, "").strip()
+    if dsn:
+        await run_migrations(dsn)
+    else:
+        logger.warning("POSTGRES_URL not set — skipping workbench migrations")
+    asyncio.create_task(start_nats_subscriber())
+    yield
+
+
 def create_app() -> Starlette:
     """Create standalone Starlette app for the workbench."""
-    return Starlette(routes=[workbench_mount])
+    return Starlette(routes=[workbench_mount], lifespan=_lifespan)
 
 
 if __name__ == "__main__":
