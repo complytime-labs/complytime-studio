@@ -2,9 +2,8 @@
 
 """Gateway tool functions and SQL guard for the ComplyTime Studio assistant.
 
-@tool-decorated functions call the gateway REST API (or gRPC when
-GATEWAY_GRPC_URL is set) to read platform data. MCP is used only
-for gemara validation/migration.
+@tool-decorated functions call the gateway REST API to read platform
+data. MCP is used only for gemara validation/migration.
 
 SQL guard logic is applied as a pre-invocation check on any tool that
 accepts raw SQL arguments. Protects against write operations regardless
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 GEMARA_MCP_URL = os.environ.get("GEMARA_MCP_URL", "")
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://studio-gateway:8080")
-GATEWAY_GRPC_URL = os.environ.get("GATEWAY_GRPC_URL", "")
 AGENT_ID = os.environ.get("AGENT_ID", "studio-assistant")
 
 _SQL_WRITE = re.compile(
@@ -62,8 +60,6 @@ async def query_evidence(policy_id: str = "", target: str = "", limit: int = 100
 @tool
 async def list_policies() -> str:
     """List all imported policies from the gateway."""
-    if GATEWAY_GRPC_URL:
-        return await _list_policies_grpc()
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(
             f"{GATEWAY_URL.rstrip('/')}/api/policies",
@@ -71,19 +67,6 @@ async def list_policies() -> str:
         )
         resp.raise_for_status()
         return resp.text
-
-
-async def _list_policies_grpc() -> str:
-    """Call PolicyService.ListPolicies via gRPC and return JSON."""
-    import grpc
-    from google.protobuf.json_format import MessageToJson
-
-    from complytime.v1 import policies_pb2, policies_pb2_grpc
-
-    async with grpc.aio.insecure_channel(GATEWAY_GRPC_URL) as channel:
-        stub = policies_pb2_grpc.PolicyServiceStub(channel)
-        resp = await stub.ListPolicies(policies_pb2.ListPoliciesRequest())
-        return MessageToJson(resp, preserving_proto_field_name=True)
 
 
 @tool
