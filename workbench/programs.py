@@ -11,6 +11,7 @@ from typing import Any, Mapping
 from uuid import UUID
 
 import asyncpg
+import httpx
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -57,11 +58,6 @@ WHERE id = $1 AND deleted_at IS NULL"""
 SQL_EXISTS_PROGRAM = (
     "SELECT 1 FROM workbench.programs WHERE id = $1 AND deleted_at IS NULL LIMIT 1"
 )
-
-SQL_RESOLVE_GUIDANCE_CATALOG = """SELECT target_catalog_id
-    FROM public.mapping_documents
-    WHERE framework = $1
-    LIMIT 1"""
 
 SQL_INSERT_PROGRAM = (
     """INSERT INTO workbench.programs (
@@ -204,9 +200,20 @@ async def _maybe_resolve_guidance_catalog_id(
         return guidance_catalog_id
     if not framework:
         return None
-    resolved = await conn.fetchval(SQL_RESOLVE_GUIDANCE_CATALOG, framework)
-    if resolved:
-        return str(resolved)
+    gateway_url = os.environ.get("GATEWAY_URL", "http://studio-gateway:8080")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"{gateway_url.rstrip('/')}/api/catalogs",
+                params={"type": "mapping", "framework": framework},
+                headers={"X-Forwarded-Email": "workbench@complytime.dev"},
+            )
+            resp.raise_for_status()
+            catalogs = resp.json()
+            if isinstance(catalogs, list) and catalogs:
+                return str(catalogs[0].get("target_catalog_id", ""))
+    except Exception:
+        pass
     return None
 
 

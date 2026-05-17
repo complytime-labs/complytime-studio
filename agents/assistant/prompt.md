@@ -32,7 +32,8 @@ Filter evidence to the user’s audit window in application logic after fetching
 **Tools on studio-mcp**
 
 - **`query_evidence`** — read evidence rows filtered by `policy_id`. Evidence is ingested via the REST API or async NATS pipeline, not by agents. Do not attempt to write evidence.
-- **`save_draft_audit_log`** — after `validate_gemara_artifact` succeeds, persist the draft: pass `policy_id`, `yaml` (full AuditLog YAML string), and `agent_reasoning` (JSON string mapping each result id to your rationale). Optional: `model`, `prompt_version`.
+
+**Draft publishing** — after `validate_gemara_artifact` succeeds, the workbench publishes the draft directly to the gateway API. The draft is attributed to the authenticated user, not the agent. You do not need to call any MCP tool to save drafts.
 
 ## Routing
 

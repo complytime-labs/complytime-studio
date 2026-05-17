@@ -45,7 +45,7 @@ from .programs import (
 logger = logging.getLogger(__name__)
 
 GEMARA_MCP_URL = os.environ.get("GEMARA_MCP_URL", "")
-ORAS_MCP_URL = os.environ.get("ORAS_MCP_URL", "")
+GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://studio-gateway:8080")
 
 
 def _load_agent_cards() -> list[dict[str, Any]]:
@@ -182,6 +182,46 @@ async def validate_artifact(request: Request) -> JSONResponse:
         return JSONResponse({"error": str(e)}, status_code=502)
 
 
+async def posture_summary(request: Request) -> JSONResponse:
+    """Aggregate posture from gateway evidence and certifications (ADR 0039)."""
+    params = dict(request.query_params)
+    headers = {"X-Forwarded-Email": request.headers.get("x-forwarded-email", "")}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(
+                f"{GATEWAY_URL.rstrip('/')}/api/posture",
+                params=params,
+                headers=headers,
+            )
+            resp.raise_for_status()
+            return JSONResponse(resp.json())
+    except httpx.HTTPStatusError as e:
+        return JSONResponse({"error": str(e)}, status_code=e.response.status_code)
+    except Exception as e:
+        logger.exception("posture aggregation failed")
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+async def risk_severity(request: Request) -> JSONResponse:
+    """Aggregate risk severity from gateway risk data (ADR 0039)."""
+    params = dict(request.query_params)
+    headers = {"X-Forwarded-Email": request.headers.get("x-forwarded-email", "")}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(
+                f"{GATEWAY_URL.rstrip('/')}/api/risks/severity",
+                params=params,
+                headers=headers,
+            )
+            resp.raise_for_status()
+            return JSONResponse(resp.json())
+    except httpx.HTTPStatusError as e:
+        return JSONResponse({"error": str(e)}, status_code=e.response.status_code)
+    except Exception as e:
+        logger.exception("risk severity aggregation failed")
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
 async def migrate_artifact(request: Request) -> JSONResponse:
     """Proxy to gemara-mcp migrate_gemara_artifact."""
     if not GEMARA_MCP_URL:
@@ -214,7 +254,7 @@ async def migrate_artifact(request: Request) -> JSONResponse:
 
 async def publish_bundle(request: Request) -> JSONResponse:
     """Bundle YAML artifacts and push to OCI registry via oras-mcp."""
-    if not ORAS_MCP_URL:
+    if not os.environ.get("ORAS_MCP_URL", ""):
         return JSONResponse(
             {"error": "oras-mcp unavailable"}, status_code=503
         )
@@ -225,7 +265,7 @@ async def publish_bundle(request: Request) -> JSONResponse:
 
 async def registry_repositories(request: Request) -> JSONResponse:
     """List OCI repositories via oras-mcp."""
-    if not ORAS_MCP_URL:
+    if not os.environ.get("ORAS_MCP_URL", ""):
         return JSONResponse(
             {"error": "oras-mcp unavailable"}, status_code=503
         )
@@ -255,6 +295,8 @@ workbench_routes = [
     Route("/migrate", migrate_artifact, methods=["POST"]),
     Route("/publish", publish_bundle, methods=["POST"]),
     Route("/registry/repositories", registry_repositories, methods=["GET"]),
+    Route("/posture", posture_summary, methods=["GET"]),
+    Route("/risks/severity", risk_severity, methods=["GET"]),
     Route("/programs", list_programs, methods=["GET"]),
     Route("/programs", create_program, methods=["POST"]),
     Route("/programs/{id}", get_program, methods=["GET"]),

@@ -39,7 +39,6 @@ MODEL_PROVIDER = os.environ.get("MODEL_PROVIDER", "AnthropicVertexAI")
 PORT = int(os.environ.get("PORT", "8080"))
 
 GEMARA_MCP_URL = os.environ.get("GEMARA_MCP_URL", "")
-STUDIO_MCP_URL = os.environ.get("STUDIO_MCP_URL", "")
 POSTGRES_URL = os.environ.get("POSTGRES_URL", "")
 AGENT_ID = os.environ.get("AGENT_ID", "studio-assistant")
 KAGENT_URL = os.environ.get("KAGENT_URL", "http://kagent-controller:8083")
@@ -82,34 +81,18 @@ def _build_mcp_servers() -> dict:
             "url": GEMARA_MCP_URL,
             "headers": headers,
         }
-    if STUDIO_MCP_URL:
-        servers["studio-mcp"] = {
-            "transport": "streamable_http",
-            "url": STUDIO_MCP_URL,
-            "headers": headers,
-        }
     if not servers:
         logger.warning("No MCP servers configured — agent running without MCP tools")
     return servers
 
 
 def _build_checkpointer():
-    """Create PostgresSaver checkpointer if POSTGRES_URL is configured."""
-    if not POSTGRES_URL:
-        logger.warning("POSTGRES_URL not set — running without persistent checkpointer")
-        return None
-    try:
-        from psycopg_pool import ConnectionPool
-        from langgraph.checkpoint.postgres import PostgresSaver
-        import psycopg
+    """Build a KAgentCheckpointer backed by the kagent-controller API."""
+    import httpx
+    from kagent.langgraph._checkpointer import KAgentCheckpointer
 
-        pool = ConnectionPool(conninfo=POSTGRES_URL)
-        with psycopg.connect(POSTGRES_URL, autocommit=True) as setup_conn:
-            PostgresSaver(conn=setup_conn).setup()
-        return PostgresSaver(conn=pool)
-    except Exception as e:
-        logger.error("Failed to create PostgresSaver: %s", e)
-        return None
+    client = httpx.AsyncClient(base_url=KAGENT_URL, timeout=30.0)
+    return KAgentCheckpointer(client=client, app_name=AGENT_ID)
 
 
 def _build_audit_subgraph(model, mcp_servers: dict, system_prompt: str) -> StateGraph:

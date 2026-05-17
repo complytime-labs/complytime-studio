@@ -3,7 +3,7 @@
 """Deterministic validation gate for the audit production workflow.
 
 Runs CUE schema validation via gemara-mcp and verifies evidence
-references exist via studio-mcp's query_evidence tool. This is a
+references exist via the studio gateway evidence API. This is a
 graph node — the LLM cannot skip or bypass it.
 """
 
@@ -11,7 +11,7 @@ import json
 import logging
 import re
 
-from tools import GEMARA_MCP_URL, STUDIO_MCP_URL, _call_mcp_tool
+from tools import AGENT_ID, GATEWAY_URL, GEMARA_MCP_URL, _call_mcp_tool
 
 logger = logging.getLogger(__name__)
 
@@ -48,32 +48,28 @@ async def _validate_schema(yaml_content: str) -> dict:
 
 
 async def _verify_evidence_refs(refs: list[str], policy_id: str) -> list[str]:
-    """Verify evidence IDs exist via studio-mcp query_evidence. Returns missing IDs."""
-    if not refs or not STUDIO_MCP_URL:
+    """Verify evidence IDs exist via gateway API. Returns missing IDs."""
+    if not refs or not GATEWAY_URL:
         return []
 
     try:
-        result = await _call_mcp_tool(
-            STUDIO_MCP_URL,
-            "query_evidence",
-            {"policy_id": policy_id, "limit": len(refs) + 10},
-        )
-        content = result.get("content", [])
-        if isinstance(content, list) and content:
-            text = content[0].get("text", "")
-            try:
-                rows = json.loads(text)
-                found = set()
-                if isinstance(rows, list):
-                    for r in rows:
-                        eid = r.get("evidence_id", "")
-                        if eid:
-                            found.add(eid)
-            except (json.JSONDecodeError, TypeError):
-                found = set()
-        else:
+        import httpx
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(
+                f"{GATEWAY_URL.rstrip('/')}/api/evidence",
+                params={"policy_id": policy_id, "limit": str(len(refs) + 10)},
+                headers={"X-Forwarded-Email": AGENT_ID + "@complytime.dev"},
+            )
+            resp.raise_for_status()
+            rows = resp.json()
             found = set()
-        return [r for r in refs if r not in found]
+            if isinstance(rows, list):
+                for r in rows:
+                    eid = r.get("evidence_id", "") or r.get("id", "")
+                    if eid:
+                        found.add(eid)
+            return [r for r in refs if r not in found]
     except Exception as e:
         logger.warning("Evidence ref verification failed: %s", e)
         return []

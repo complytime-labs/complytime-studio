@@ -55,7 +55,6 @@ mcp:
       - studio://risks
     tools:
       - query_evidence
-      - save_draft_audit_log
 
 # ---------------------------------------------------------------------------
 # A2A — Agent-to-Agent protocol skills advertised on the agent card.

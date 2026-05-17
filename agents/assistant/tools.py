@@ -16,11 +16,12 @@ import os
 import re
 
 import httpx
+from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
 
-STUDIO_MCP_URL = os.environ.get("STUDIO_MCP_URL", "")
 GEMARA_MCP_URL = os.environ.get("GEMARA_MCP_URL", "")
+GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://studio-gateway:8080")
 AGENT_ID = os.environ.get("AGENT_ID", "studio-assistant")
 
 _SQL_WRITE = re.compile(
@@ -34,6 +35,72 @@ GUARDED_TOOLS = frozenset({
     "execute_sql",
     "run_query",
 })
+
+
+@tool
+async def query_evidence(policy_id: str = "", target: str = "", limit: int = 100) -> str:
+    """Query evidence records from the gateway, optionally filtered by policy and target."""
+    params = {}
+    if policy_id:
+        params["policy_id"] = policy_id
+    if target:
+        params["target"] = target
+    if limit:
+        params["limit"] = str(limit)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{GATEWAY_URL.rstrip('/')}/api/evidence",
+            params=params,
+            headers={"X-Forwarded-Email": AGENT_ID + "@complytime.dev"},
+        )
+        resp.raise_for_status()
+        return resp.text
+
+
+@tool
+async def list_policies() -> str:
+    """List all imported policies from the gateway."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{GATEWAY_URL.rstrip('/')}/api/policies",
+            headers={"X-Forwarded-Email": AGENT_ID + "@complytime.dev"},
+        )
+        resp.raise_for_status()
+        return resp.text
+
+
+@tool
+async def get_certifications(policy_id: str = "", evidence_id: str = "") -> str:
+    """Get certification records, optionally filtered by policy or evidence ID."""
+    params = {}
+    if policy_id:
+        params["policy_id"] = policy_id
+    if evidence_id:
+        params["evidence_id"] = evidence_id
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{GATEWAY_URL.rstrip('/')}/api/certifications",
+            params=params,
+            headers={"X-Forwarded-Email": AGENT_ID + "@complytime.dev"},
+        )
+        resp.raise_for_status()
+        return resp.text
+
+
+@tool
+async def list_catalogs(catalog_type: str = "") -> str:
+    """List catalogs from the gateway, optionally filtered by type."""
+    params = {}
+    if catalog_type:
+        params["type"] = catalog_type
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(
+            f"{GATEWAY_URL.rstrip('/')}/api/catalogs",
+            params=params,
+            headers={"X-Forwarded-Email": AGENT_ID + "@complytime.dev"},
+        )
+        resp.raise_for_status()
+        return resp.text
 
 
 async def _call_mcp_tool(url: str, tool_name: str, arguments: dict) -> dict:
@@ -68,46 +135,42 @@ async def publish_audit_log(
     yaml_content: str,
     policy_id: str = "",
     reasoning: str = "",
+    user_email: str = "",
 ) -> dict:
-    """Publish a validated AuditLog YAML as a draft via studio-mcp.
+    """Publish a validated AuditLog YAML as a draft via the gateway API.
 
     Called by the publish_draft graph node AFTER the validation gate
     passes and human approval is received. Not directly callable by
-    the LLM.
+    the LLM. Posts directly to the gateway's internal port so the
+    draft is attributed to the real user (MCP stays read-only).
     """
-    if not STUDIO_MCP_URL:
-        return {"error": "STUDIO_MCP_URL not configured"}
-
     model_name = os.environ.get("MODEL_NAME", "unknown")
-    arguments = {
+    identity = user_email or os.environ.get("MCP_IDENTITY", "studio-assistant@complytime.dev")
+    body = {
         "policy_id": policy_id,
-        "yaml": yaml_content,
+        "content": yaml_content,
         "agent_reasoning": reasoning,
         "model": model_name,
         "prompt_version": "langgraph-v1",
     }
+    headers = {
+        "Content-Type": "application/json",
+        "X-Forwarded-Email": identity,
+    }
 
     try:
-        result = await _call_mcp_tool(
-            STUDIO_MCP_URL, "save_draft_audit_log", arguments
-        )
-        content = result.get("content", [])
-        if isinstance(content, list) and content:
-            text = content[0].get("text", "")
-            try:
-                parsed = json.loads(text)
-                draft_id = parsed.get("draft_id", "")
-                logger.info(
-                    "persisted draft audit log %s (policy=%s)", draft_id, policy_id
-                )
-                return {
-                    "status": "drafted",
-                    "draft_id": draft_id,
-                    "note": "Draft saved for human review.",
-                }
-            except (json.JSONDecodeError, TypeError):
-                return {"status": "drafted", "raw": text}
-        return {"status": "drafted"}
+        url = GATEWAY_URL.rstrip("/") + "/api/draft-audit-logs"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, json=body, headers=headers)
+            resp.raise_for_status()
+            result = resp.json()
+            draft_id = result.get("draft_id", "")
+            logger.info("persisted draft audit log %s (policy=%s)", draft_id, policy_id)
+            return {
+                "status": "drafted",
+                "draft_id": draft_id,
+                "note": "Draft saved for human review.",
+            }
     except Exception as e:
         logger.error("failed to persist draft audit log: %s", e)
         return {"error": f"Failed to persist draft: {e}"}
@@ -154,4 +217,4 @@ def build_tools() -> list:
     publish_audit_log is NOT included — it is called by the
     publish_draft graph node, not by the LLM directly.
     """
-    return []
+    return [query_evidence, list_policies, get_certifications, list_catalogs]
