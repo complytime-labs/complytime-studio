@@ -1,6 +1,6 @@
 ---
 name: studio-audit
-description: Audit methodology, classification criteria, coverage mapping, and studio-mcp resource reference
+description: Audit methodology, classification criteria, coverage mapping, and gateway tool reference
 ---
 
 # Studio Audit
@@ -44,40 +44,29 @@ When `mapping_documents` exist for the policy, join AuditResults with mapping en
 
 Multiple controls mapping to the same external entry: use strongest coverage. No mapping documents = skip cross-framework analysis.
 
-## MCP — Gemara tools
+## Gemara Tools (MCP)
 
 **validate_gemara_artifact**: `artifact_content` (YAML string), `definition` (e.g. `#AuditLog`), `version` (optional)
 
 **migrate_gemara_artifact**: `artifact_content` (YAML string), `artifact_type` (optional), `gemara_version` (optional)
 
-## MCP — studio-mcp (data)
+## Gateway Tools (@tool functions)
 
-Read JSON via **`studio://`** resources (see agent prompt). Do **not** execute SQL.
+Data access via LangChain `@tool`-decorated functions that call the gateway REST API directly (ADR 0041).
 
-**query_evidence**: Read evidence rows filtered by `policy_id`. Evidence is ingested via the REST API or async NATS pipeline, not by agents.
+| Tool | Purpose |
+|:--|:--|
+| `query_evidence` | Query evidence rows filtered by `policy_id`, `target`, with `limit`. |
+| `list_policies` | List all imported policies (metadata). |
+| `get_certifications` | Get certification records filtered by `policy_id` or `evidence_id`. |
+| `list_catalogs` | List catalogs, optionally filtered by `catalog_type`. |
 
-**save_draft_audit_log**: After validation, persist draft YAML — `policy_id`, `yaml`, optional `agent_reasoning` (JSON string), optional `model` / `prompt_version`.
+Evidence is ingested via the REST API or async NATS pipeline, not by agents. Do not attempt to write evidence.
 
-## Workbench posture vs. studio resources
+## Draft Publishing
 
-The workbench calls `GET /api/posture` with optional `start` and `end` to bound evidence by `collected_at`. **`studio://posture`** returns aggregates from the store; when you need parity with a user-selected window, filter evidence rows client-side using the same date range (presets: 7d, 30d, 90d, or all-time).
+After `validate_gemara_artifact` succeeds and the user approves, `publish_audit_log` persists the draft via the gateway REST API. The draft is attributed to the authenticated user, not the agent.
 
-## Platform entities (JSON shape)
+## Posture vs. Evidence Query
 
-Underlying storage is PostgreSQL; **`studio://`** resources expose the same entities as JSON. Use resource payloads instead of ad-hoc SQL.
-
-| Entity | Typical fields | Resource hints |
-|:--|:--|:--|
-| Policies | policy_id, title, content (YAML), oci_reference | `studio://policies`, `studio://policies/{id}` |
-| Evidence | evidence_id, target_id, policy_id, control_id, requirement_id, eval_result, compliance_status, collected_at, engine_name | `studio://evidence?policy_id=` |
-| Mappings | mapping_id, policy_id, framework, content | `studio://mappings` |
-| Catalogs | catalog_id, catalog_type, title, policy_id | `studio://catalogs` |
-| Threats / Risks | catalog_id, ids, titles, severity | `studio://threats`, `studio://risks` |
-| Audit logs | audit metadata + content | `studio://audit-logs?policy_id=` (policy_id required) |
-
-## Example resource reads
-
-- Policy body: `studio://policies/ampel-branch-protection`
-- Evidence page: `studio://evidence?policy_id=ampel-branch-protection&limit=100&offset=0`
-- Mapping list: `studio://mappings`
-- Risks for catalog: `studio://risks?catalog_id=<catalog_id>`
+The workbench exposes `GET /workbench/posture` with optional `start` and `end` to bound evidence by `collected_at`. When you need parity with a user-selected audit window, filter evidence rows client-side using the same date range (presets: 7d, 30d, 90d, or all-time).

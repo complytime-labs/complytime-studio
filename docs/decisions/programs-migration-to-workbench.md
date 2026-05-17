@@ -55,8 +55,10 @@ The UI already routes `/workbench/*` to the workbench via Nginx. No gateway rout
 
 ### MCP surface
 
-- `complytime-mcp` (core): remove `programs` and `programs/{id}` resources.
-- `studio-mcp` (workbench): add `programs` and `programs/{id}` resources.
+> **Update:** `complytime-mcp` and `studio-mcp` were removed entirely (ADR 0041). Programs data is accessed via workbench REST endpoints. No MCP surface changes needed.
+
+~~- `complytime-mcp` (core): remove `programs` and `programs/{id}` resources.~~
+~~- `studio-mcp` (workbench): add `programs` and `programs/{id}` resources.~~
 
 ### NATS integration
 
@@ -75,7 +77,7 @@ The workbench subscribes to `core.events.*` for evidence arrival and posture cha
 
 1. Implement Programs model + routes in `complytime-studio`
 2. Create `workbench.programs` table migration
-3. Update `studio-mcp` with programs resources
+3. ~~Update `studio-mcp` with programs resources~~ (superseded by ADR 0041)
 4. Update `studio-ui` to call `/workbench/programs`
 5. Remove Programs code from `complytime-core` (dead code cleanup)
-6. Update serving-layer ADR (#0031) to remove programs from core MCP
+6. ~~Update serving-layer ADR (#0031) to remove programs from core MCP~~ (superseded by ADR 0041)

@@ -4,7 +4,7 @@
 
 These are deterministic functions called as LangGraph nodes:
 - extract_draft_node: parses draft YAML from LLM output into state
-- publish_draft_node: persists validated AuditLog via studio-mcp
+- publish_draft_node: persists validated AuditLog via gateway REST API
 - halt_node: terminal node emitting accumulated errors
 - clarify_node: asks user to disambiguate intent
 """
@@ -68,10 +68,10 @@ def _extract_evidence_refs(yaml_content: str) -> list[str]:
 
 
 async def publish_draft_node(state: dict) -> dict:
-    """Graph node: publish the validated draft AuditLog via studio-mcp.
+    """Graph node: publish the validated draft AuditLog via gateway REST API.
 
     Reached only after validation gate passes AND human approves
-    at the interrupt gate. Calls save_draft_audit_log on studio-mcp
+    at the interrupt gate. Calls publish_audit_log (gateway @tool)
     and emits a confirmation message.
     """
     draft = state.get("draft_yaml", "")

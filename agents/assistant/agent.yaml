@@ -43,18 +43,6 @@ mcp:
     tools:
       - validate_gemara_artifact
       - migrate_gemara_artifact
-  - server: studio-mcp
-    resources:
-      - studio://policies
-      - studio://evidence
-      - studio://posture
-      - studio://audit-logs
-      - studio://mappings
-      - studio://catalogs
-      - studio://threats
-      - studio://risks
-    tools:
-      - query_evidence
 
 # ---------------------------------------------------------------------------
 # A2A — Agent-to-Agent protocol skills advertised on the agent card.

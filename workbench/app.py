@@ -8,7 +8,7 @@ Provides agent-support endpoints under /workbench/*:
   - Chat conversation state
   - Notifications (NATS-backed core.events; ADR #0029)
   - Gemara validate/migrate (direct MCP)
-  - OCI publish and registry browse (direct MCP)
+  - Posture and risk aggregation (proxied from gateway; ADR #0039)
 
 Run standalone or mount routes into an existing Starlette app.
 """
@@ -253,22 +253,14 @@ async def migrate_artifact(request: Request) -> JSONResponse:
 
 
 async def publish_bundle(request: Request) -> JSONResponse:
-    """Bundle YAML artifacts and push to OCI registry via oras-mcp."""
-    if not os.environ.get("ORAS_MCP_URL", ""):
-        return JSONResponse(
-            {"error": "oras-mcp unavailable"}, status_code=503
-        )
+    """Stub: OCI publish deferred (oras-mcp removed per ADR 0041)."""
     return JSONResponse(
         {"error": "publish not yet implemented"}, status_code=501
     )
 
 
 async def registry_repositories(request: Request) -> JSONResponse:
-    """List OCI repositories via oras-mcp."""
-    if not os.environ.get("ORAS_MCP_URL", ""):
-        return JSONResponse(
-            {"error": "oras-mcp unavailable"}, status_code=503
-        )
+    """Stub: OCI registry browse deferred (oras-mcp removed per ADR 0041)."""
     return JSONResponse(
         {"error": "registry browse not yet implemented"}, status_code=501
     )

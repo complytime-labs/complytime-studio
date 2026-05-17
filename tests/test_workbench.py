@@ -87,17 +87,15 @@ class TestMigrateEndpoint:
 
 
 class TestPublishEndpoint:
-    async def test_unavailable_without_oras_mcp(self, monkeypatch, workbench_client: httpx.AsyncClient):
-        monkeypatch.setenv("ORAS_MCP_URL", "")
+    async def test_returns_not_implemented(self, workbench_client: httpx.AsyncClient):
         resp = await workbench_client.post(
             "/workbench/publish",
             json={"artifacts": []},
         )
-        assert resp.status_code == 503
+        assert resp.status_code == 501
 
 
 class TestRegistryEndpoint:
-    async def test_unavailable_without_oras_mcp(self, monkeypatch, workbench_client: httpx.AsyncClient):
-        monkeypatch.setenv("ORAS_MCP_URL", "")
+    async def test_returns_not_implemented(self, workbench_client: httpx.AsyncClient):
         resp = await workbench_client.get("/workbench/registry/repositories")
-        assert resp.status_code == 503
+        assert resp.status_code == 501
