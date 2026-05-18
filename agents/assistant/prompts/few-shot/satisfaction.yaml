@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Few-shot examples for satisfaction determination.
+# Maps evidence completeness and cadence to Satisfied / Partially Satisfied /
+# Not Satisfied / Not Applicable.
+
+- scenario: "Control BP-1, requirement BP-1.AR-1, target cluster-prod — full cadence, high confidence"
+  evidence:
+    eval_result: Passed
+    compliance_status: Compliant
+    confidence: High
+    assessment_days: 4
+    expected_cycles: 4
+    cadence_gaps: 0
+  determination: Satisfied
+  reasoning: >
+    Evidence is complete (4 of 4 expected assessment cycles present),
+    current, and supports compliance. Confidence is High and there are
+    no cadence gaps. All criteria for Satisfied are met.
+
+- scenario: "Control BP-2, requirement BP-2.AR-1, target cluster-prod — missing cycles"
+  evidence:
+    eval_result: Passed
+    compliance_status: Compliant
+    confidence: Medium
+    assessment_days: 2
+    expected_cycles: 4
+    cadence_gaps: 2
+  determination: Partially Satisfied
+  reasoning: >
+    The most recent eval_result is Passed, but only 2 of 4 expected
+    assessment cycles have evidence. Missing cycles make the evidence
+    incomplete. Classify as Partially Satisfied, not Satisfied — cadence
+    completeness is required for full satisfaction.
+
+- scenario: "Control BP-3, requirement BP-3.AR-1, target cluster-prod — failed, no remediation"
+  evidence:
+    eval_result: Failed
+    compliance_status: Non-Compliant
+    confidence: High
+    assessment_days: 4
+    expected_cycles: 4
+    cadence_gaps: 0
+  determination: Not Satisfied
+  reasoning: >
+    Evidence shows non-compliance (Failed eval_result) across a complete
+    cadence. No remediation was attempted. This is Not Satisfied regardless
+    of cadence completeness — a complete record of failure is still failure.
+
+- scenario: "Control BP-4, requirement BP-4.AR-1, target cluster-prod — scoped out"
+  evidence: null
+  target_type: "external-saas"
+  control_applicability: ["on-premise", "self-hosted"]
+  determination: Not Applicable
+  reasoning: >
+    The control's applicability tags (on-premise, self-hosted) do not match
+    the target type (external-saas). This control is scoped out for this
+    target. Classify as Not Applicable, not Gap — the absence of evidence
+    is expected.
+
+# --- Anti-pattern: single cycle looks good but cadence is incomplete ---
+
+- scenario: "Control BP-5, requirement BP-5.AR-1, target cluster-prod — one good cycle in quarterly cadence"
+  evidence:
+    eval_result: Passed
+    compliance_status: Compliant
+    confidence: High
+    assessment_days: 1
+    expected_cycles: 4
+    cadence_gaps: 3
+  determination: Partially Satisfied
+  reasoning: >
+    ANTI-PATTERN: The single assessment shows Passed with High confidence,
+    which looks like Satisfied. However, this is a quarterly cadence and
+    only 1 of 4 expected cycles has evidence. A single passing snapshot
+    does not demonstrate continuous compliance. Classify as Partially
+    Satisfied. If the cadence were annual (1 expected cycle), this same
+    evidence would be Satisfied.

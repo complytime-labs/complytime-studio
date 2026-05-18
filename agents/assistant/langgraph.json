@@ -1,0 +1,9 @@
+{
+  "$schema": "https://langgra.ph/schema.json",
+  "graphs": {
+    "studio_assistant": "./graph.py:graph"
+  },
+  "env": ".env",
+  "python_version": "3.13",
+  "dependencies": ["./requirements.txt"]
+}

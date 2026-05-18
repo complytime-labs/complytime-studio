@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Few-shot examples for AuditResult type classification.
+# Each example pairs an evidence pattern with the correct classification
+# and reasoning. Anti-pattern examples show common misclassifications.
+
+- scenario: "Control BP-1, requirement BP-1.AR-1, target cluster-prod — clean pass"
+  evidence:
+    eval_result: Passed
+    compliance_status: Compliant
+    confidence: High
+    cadence_gaps: 0
+    remediation_action: null
+    exception_active: null
+  classification: Strength
+  reasoning: >
+    Evidence exists within the audit window, eval_result is Passed,
+    compliance_status is Compliant, confidence is High, no cadence gaps.
+    Straightforward Strength.
+
+- scenario: "Control BP-2, requirement BP-2.AR-1, target cluster-prod — failed evaluation"
+  evidence:
+    eval_result: Failed
+    compliance_status: Non-Compliant
+    confidence: High
+    cadence_gaps: 0
+    remediation_action: null
+    exception_active: null
+  classification: Finding
+  reasoning: >
+    Evidence exists and eval_result is Failed. No remediation was attempted.
+    This is a clear Finding — specific non-compliance identified.
+
+- scenario: "Control BP-3, requirement BP-3.AR-1, target cluster-staging — no evidence rows"
+  evidence: null
+  classification: Gap
+  reasoning: >
+    No evidence rows exist for this criteria entry within the audit window.
+    Absence of evidence is always a Gap, never implicit compliance.
+
+- scenario: "Control BP-4, requirement BP-4.AR-1, target cluster-prod — mixed results"
+  evidence:
+    eval_result: Needs Review
+    compliance_status: Unknown
+    confidence: Low
+    cadence_gaps: 0
+    remediation_action: null
+    exception_active: null
+  classification: Observation
+  reasoning: >
+    Evidence exists but eval_result is Needs Review and confidence is Low.
+    The evidence is ambiguous and requires human judgment. Classify as
+    Observation, not Finding (no definitive failure) or Strength (no
+    definitive pass).
+
+- scenario: "Control BP-5, requirement BP-5.AR-1, target cluster-prod — cadence gap detected"
+  evidence:
+    eval_result: Passed
+    compliance_status: Compliant
+    confidence: High
+    cadence_gaps: 2
+    remediation_action: null
+    exception_active: null
+  classification: Finding
+  reasoning: >
+    The most recent eval_result is Passed, but 2 expected assessment
+    cycles have no evidence. Cadence gaps are Findings — the target failed
+    to meet the continuous compliance requirement even though the latest
+    snapshot looks compliant.
+
+# --- Anti-pattern: remediated failure within audit window ---
+
+- scenario: "Control BP-6, requirement BP-6.AR-1, target cluster-prod — failed then remediated"
+  evidence:
+    eval_result: Failed
+    compliance_status: Non-Compliant
+    confidence: High
+    cadence_gaps: 0
+    remediation_action: Remediate
+    remediation_status: Success
+    exception_active: null
+  classification: Strength
+  reasoning: >
+    ANTI-PATTERN: The obvious classification is Finding because
+    eval_result is Failed. However, remediation_status is Success and the
+    remediation occurred within the audit window. A successful remediation
+    converts a Finding into a Strength. Note the remediation in the
+    AuditResult description. If remediation_status were Fail or Skipped,
+    this would remain a Finding.
+
+# --- Anti-pattern: active exception ---
+
+- scenario: "Control BP-7, requirement BP-7.AR-1, target cluster-prod — failed with active exception"
+  evidence:
+    eval_result: Failed
+    compliance_status: Non-Compliant
+    confidence: High
+    cadence_gaps: 0
+    remediation_action: null
+    exception_active: true
+    exception_id: "EXC-2026-042"
+  classification: Strength
+  reasoning: >
+    ANTI-PATTERN: eval_result is Failed, but exception_active is true.
+    An active exception converts a Finding into an annotated Strength.
+    The AuditResult description MUST note the exception ID and that
+    compliance is achieved via exception, not via passing evaluation.

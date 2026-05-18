@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Canonical agent definition — framework-agnostic source of truth.
+# Helm renders this into a kagent Declarative Agent CRD.
+# The agentDirectory in values.yaml MUST mirror the a2a block below.
+
+name: studio-assistant
+description: >-
+  ComplyTime Studio assistant — audit preparation, evidence synthesis,
+  cross-framework coverage analysis, and compliance guidance
+
+framework: langgraph
+prompt: prompt.md
+
+# ---------------------------------------------------------------------------
+# Skills — reusable knowledge packs injected into agent context at runtime.
+# ---------------------------------------------------------------------------
+skills:
+  # Internal skills (this repo)
+  - path: skills/studio-audit
+  - path: skills/posture-check
+  # External skills
+  - repo: https://github.com/rhaml-23/prompt.git
+    ref: main
+    path: skills/research.md
+  - repo: https://github.com/rhaml-23/prompt.git
+    ref: main
+    path: skills/gemara.md
+
+# ---------------------------------------------------------------------------
+# Model — default provider/name. Helm values (agents.assistant.model.*)
+# take precedence at deploy time.
+# ---------------------------------------------------------------------------
+model:
+  provider: AnthropicVertexAI
+  name: claude-opus-4-6
+
+# ---------------------------------------------------------------------------
+# MCP — Model Context Protocol servers the agent can call as tools.
+# ---------------------------------------------------------------------------
+mcp:
+  - server: studio-gemara-mcp
+    tools:
+      - validate_gemara_artifact
+      - migrate_gemara_artifact
+
+# ---------------------------------------------------------------------------
+# A2A — Agent-to-Agent protocol skills advertised on the agent card.
+# ---------------------------------------------------------------------------
+a2a:
+  skills:
+    - id: compliance-assistant
+      name: Studio Assistant
+      description: >-
+        Audit preparation, evidence synthesis, cross-framework coverage
+        analysis, policy guidance, and AuditLog generation.
+      tags: [assistant, audit, compliance, coverage, evidence, layer-7]

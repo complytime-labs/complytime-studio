@@ -1,0 +1,13 @@
+kagent-langgraph==0.9.2
+a2a-sdk>=0.3.23,<1.0.0
+langchain-mcp-adapters==0.2.2
+langchain-anthropic==1.4.1
+langchain-google-vertexai==3.2.3
+langgraph-checkpoint-postgres==2.0.18
+openai>=1.0.0
+pyyaml>=6.0.2
+httpx>=0.28.0
+nats-py>=2.10.0
+uvicorn>=0.34.0
+psycopg[binary]>=3.2.0
+asyncpg>=0.30.0

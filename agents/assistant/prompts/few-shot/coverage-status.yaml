@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Few-shot examples for cross-framework coverage status derivation.
+# Combines AuditResult type with mapping strength and confidence to
+# determine framework coverage.
+
+- scenario: "Control AC-2 → SOC2 CC6.1, strength 9, confidence High, AuditResult Strength"
+  audit_result_type: Strength
+  mapping:
+    framework: "SOC 2"
+    reference: "CC6.1"
+    strength: 9
+    confidence: High
+  coverage: Covered
+  reasoning: >
+    AuditResult is Strength (evidence supports compliance), mapping
+    strength is 9 (8-10 range), confidence is High. All conditions for
+    Covered are met.
+
+- scenario: "Control AC-3 → ISO 27001 A.9.2, strength 6, confidence Medium, AuditResult Strength"
+  audit_result_type: Strength
+  mapping:
+    framework: "ISO 27001"
+    reference: "A.9.2"
+    strength: 6
+    confidence: Medium
+  coverage: Partially Covered
+  reasoning: >
+    AuditResult is Strength, but mapping strength is 6 (5-7 range) with
+    Medium confidence. The internal control partially addresses the
+    external requirement. Classify as Partially Covered, not Covered —
+    the mapping strength indicates incomplete alignment.
+
+- scenario: "Control AC-4 → FedRAMP AC-2, strength 3, confidence Low, AuditResult Strength"
+  audit_result_type: Strength
+  mapping:
+    framework: "FedRAMP"
+    reference: "AC-2"
+    strength: 3
+    confidence: Low
+  coverage: Weakly Covered
+  reasoning: >
+    AuditResult is Strength, but mapping strength is 3 (1-4 range).
+    The internal control has only tangential alignment with the external
+    requirement. Weakly Covered regardless of AuditResult type.
+
+- scenario: "Control AC-5 → SOC2 CC6.3, strength 8, confidence High, AuditResult Finding"
+  audit_result_type: Finding
+  mapping:
+    framework: "SOC 2"
+    reference: "CC6.3"
+    strength: 8
+    confidence: High
+  coverage: Not Covered
+  reasoning: >
+    AuditResult is Finding (non-compliance identified). Any Finding
+    results in Not Covered regardless of mapping strength or confidence.
+    Even a strength-10, High-confidence mapping cannot produce Covered
+    status when the underlying evidence shows failure.
+
+- scenario: "Control AC-6, no mapping entry exists for target framework"
+  audit_result_type: Strength
+  mapping: null
+  coverage: Unmapped
+  reasoning: >
+    No mapping entry exists between this control and the target framework.
+    Coverage cannot be determined. Classify as Unmapped, not Gap — the
+    control may still be compliant internally but has no documented
+    relationship to this external framework.
+
+# --- Anti-pattern: high mapping strength does not override missing evidence ---
+
+- scenario: "Control AC-7 → SOC2 CC7.1, strength 10, confidence High, AuditResult Gap"
+  audit_result_type: Gap
+  mapping:
+    framework: "SOC 2"
+    reference: "CC7.1"
+    strength: 10
+    confidence: High
+  coverage: Not Covered
+  reasoning: >
+    ANTI-PATTERN: The mapping strength is 10 with High confidence, which
+    suggests strong alignment. However, the AuditResult is Gap (no
+    evidence). High mapping strength does not compensate for missing
+    evidence. Classify as Not Covered. The mapping tells us this control
+    SHOULD cover CC7.1 strongly — which makes the Gap higher priority,
+    not lower.
