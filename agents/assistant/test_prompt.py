@@ -8,7 +8,6 @@ from unittest.mock import patch
 import yaml
 
 import prompt as prompt_module
-from prompt import _load_few_shot_examples, _load_skills, load_system_prompt
 
 
 class TestLoadSystemPrompt:
@@ -20,7 +19,7 @@ class TestLoadSystemPrompt:
         with patch.object(prompt_module, "_load_base_prompt", return_value="You are a compliance assistant."):
             with patch.object(prompt_module, "SKILLS_DIR", tmp_path / "skills"):
                 with patch.object(prompt_module, "FEW_SHOT_DIR", Path("/nonexistent")):
-                    result = load_system_prompt()
+                    result = prompt_module.load_system_prompt()
                     assert "compliance assistant" in result
                     assert "Audit Skill" in result
                     assert "Loaded Skills" in result
@@ -29,14 +28,14 @@ class TestLoadSystemPrompt:
         with patch.object(prompt_module, "_load_base_prompt", return_value=""):
             with patch.object(prompt_module, "_load_skills", return_value=""):
                 with patch.object(prompt_module, "_load_few_shot_examples", return_value=""):
-                    result = load_system_prompt()
+                    result = prompt_module.load_system_prompt()
                     assert result == ""
 
     def test_base_prompt_only(self):
         with patch.object(prompt_module, "_load_base_prompt", return_value="Base prompt here."):
             with patch.object(prompt_module, "_load_skills", return_value=""):
                 with patch.object(prompt_module, "_load_few_shot_examples", return_value=""):
-                    result = load_system_prompt()
+                    result = prompt_module.load_system_prompt()
                     assert result == "Base prompt here."
 
 
@@ -47,7 +46,7 @@ class TestLoadSkills:
         (skill_dir / "SKILL.md").write_text("# Audit Skill\nClassification logic here.")
 
         with patch.object(prompt_module, "SKILLS_DIR", tmp_path / "skills"):
-            result = _load_skills()
+            result = prompt_module._load_skills()
             assert "Audit Skill" in result
             assert "Classification logic" in result
 
@@ -56,7 +55,7 @@ class TestLoadSkills:
         empty_skills.mkdir()
         (empty_skills / "empty-dir").mkdir()
         monkeypatch.setattr(prompt_module, "SKILLS_DIR", empty_skills)
-        result = _load_skills()
+        result = prompt_module._load_skills()
         assert result == ""
 
     def test_multiple_skills_joined(self, tmp_path):
@@ -67,7 +66,7 @@ class TestLoadSkills:
             (d / "SKILL.md").write_text(f"# {name.title()} Skill")
 
         with patch.object(prompt_module, "SKILLS_DIR", skills_root):
-            result = _load_skills()
+            result = prompt_module._load_skills()
             assert "Alpha Skill" in result
             assert "Beta Skill" in result
             assert "---" in result
@@ -84,7 +83,7 @@ class TestLoadFewShotExamples:
         (few_shot_dir / "audit.yaml").write_text(yaml.dump(examples))
 
         with patch.object(prompt_module, "FEW_SHOT_DIR", few_shot_dir):
-            result = _load_few_shot_examples()
+            result = prompt_module._load_few_shot_examples()
             assert "Classification Examples" in result
             assert "Pass with evidence" in result
             assert "Missing attestation" in result
@@ -100,7 +99,7 @@ class TestLoadFewShotExamples:
         )
 
         with patch.object(prompt_module, "FEW_SHOT_DIR", few_shot_dir):
-            result = _load_few_shot_examples()
+            result = prompt_module._load_few_shot_examples()
             assert "Valid one" in result
 
     def test_non_list_yaml_skipped(self, tmp_path):
@@ -109,7 +108,7 @@ class TestLoadFewShotExamples:
         (few_shot_dir / "scalar.yaml").write_text("just a string")
 
         with patch.object(prompt_module, "FEW_SHOT_DIR", few_shot_dir):
-            result = _load_few_shot_examples()
+            result = prompt_module._load_few_shot_examples()
             assert result == ""
 
     def test_empty_directory(self, tmp_path):
@@ -117,5 +116,5 @@ class TestLoadFewShotExamples:
         few_shot_dir.mkdir()
 
         with patch.object(prompt_module, "FEW_SHOT_DIR", few_shot_dir):
-            result = _load_few_shot_examples()
+            result = prompt_module._load_few_shot_examples()
             assert result == ""
