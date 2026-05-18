@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime
 from typing import Any, Mapping
@@ -14,6 +15,8 @@ import asyncpg
 import httpx
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 ENV_POSTGRES_URL = "POSTGRES_URL"
 
@@ -213,7 +216,7 @@ async def _maybe_resolve_guidance_catalog_id(
             if isinstance(catalogs, list) and catalogs:
                 return str(catalogs[0].get("target_catalog_id", ""))
     except Exception:
-        pass
+        logger.debug("catalog lookup for framework %s failed", framework)
     return None
 
 

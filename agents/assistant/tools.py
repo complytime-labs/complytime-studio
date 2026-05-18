@@ -10,7 +10,7 @@ accepts raw SQL arguments. Protects against write operations regardless
 of which MCP server exposes the tool.
 """
 
-import json
+
 import logging
 import os
 import re
