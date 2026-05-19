@@ -6,14 +6,19 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py .
-COPY callbacks.py .
-COPY event_converter.py .
+COPY graph.py .
+COPY state.py .
+COPY router.py .
+COPY nodes.py .
+COPY tools.py .
+COPY validation.py .
+COPY delegate.py .
+COPY prompt.py .
+COPY langgraph.json .
 COPY prompt.md .
 COPY prompts/ /app/prompts/
-
 COPY skills/ /app/skills/
 
 EXPOSE 8080
 
-CMD ["python", "main.py"]
+CMD ["uvicorn", "graph:graph", "--host", "0.0.0.0", "--port", "8080"]
