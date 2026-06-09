@@ -1,6 +1,6 @@
 # ADK Empty Messages Workaround
 
-**Status:** Active workaround — remove when upstream fix lands
+**Status:** Superseded — studio migrated from ADK to LangGraph (commit `c356dea`)
 **Date:** 2026-04-19
 
 ## Problem

@@ -35,8 +35,7 @@ async def run_migrations(dsn: str) -> None:
         """)
 
         sql_files = sorted(
-            f for f in MIGRATIONS_DIR.iterdir()
-            if f.suffix == ".sql" and not f.is_dir()
+            f for f in MIGRATIONS_DIR.iterdir() if f.suffix == ".sql" and not f.is_dir()
         )
 
         for sql_file in sql_files:

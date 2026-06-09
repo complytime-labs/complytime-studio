@@ -165,9 +165,7 @@ def program_row_to_json(rec: Mapping[str, Any]) -> dict[str, Any]:
         "owner": _json_value(rec.get("owner")),
         "description": _json_value(rec.get("description")),
         "metadata": md_json,
-        "policy_ids": list(rec["policy_ids"])
-        if rec["policy_ids"] is not None
-        else [],
+        "policy_ids": list(rec["policy_ids"]) if rec["policy_ids"] is not None else [],
         "environments": list(rec["environments"])
         if rec["environments"] is not None
         else [],
@@ -409,9 +407,7 @@ async def list_programs(request: Request) -> JSONResponse:
         pool = await get_pool()
         data = await list_programs_db(pool)
     except RuntimeError as e:
-        return JSONResponse(
-            {"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR
-        )
+        return JSONResponse({"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR)
     except Exception:
         return JSONResponse(
             {"error": "database error"}, status_code=HTTP_STATUS_INTERNAL_ERROR
@@ -425,9 +421,7 @@ async def get_program(request: Request) -> JSONResponse:
         pool = await get_pool()
         row = await get_program_db(pool, program_id)
     except RuntimeError as e:
-        return JSONResponse(
-            {"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR
-        )
+        return JSONResponse({"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR)
     except Exception:
         return JSONResponse(
             {"error": "database error"}, status_code=HTTP_STATUS_INTERNAL_ERROR
@@ -460,9 +454,7 @@ async def create_program(request: Request) -> JSONResponse:
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=HTTP_STATUS_BAD_REQUEST)
     except RuntimeError as e:
-        return JSONResponse(
-            {"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR
-        )
+        return JSONResponse({"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR)
     except Exception:
         return JSONResponse(
             {"error": "database error"}, status_code=HTTP_STATUS_INTERNAL_ERROR
@@ -495,9 +487,7 @@ async def update_program(request: Request) -> JSONResponse:
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=HTTP_STATUS_BAD_REQUEST)
     except RuntimeError as e:
-        return JSONResponse(
-            {"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR
-        )
+        return JSONResponse({"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR)
     except Exception:
         return JSONResponse(
             {"error": "database error"}, status_code=HTTP_STATUS_INTERNAL_ERROR
@@ -513,9 +503,7 @@ async def delete_program(request: Request) -> JSONResponse:
     except ProgramNotFoundError:
         return JSONResponse({"error": "not found"}, status_code=HTTP_STATUS_NOT_FOUND)
     except RuntimeError as e:
-        return JSONResponse(
-            {"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR
-        )
+        return JSONResponse({"error": str(e)}, status_code=HTTP_STATUS_INTERNAL_ERROR)
     except Exception:
         return JSONResponse(
             {"error": "database error"}, status_code=HTTP_STATUS_INTERNAL_ERROR

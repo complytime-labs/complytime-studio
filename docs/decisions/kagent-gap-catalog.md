@@ -1,13 +1,16 @@
 # Kagent Declarative Agent Gap Catalog
 
 **Date**: 2026-04-18
-**Status**: Active — tracks upstream kagent limitations that motivated the BYO ADK agent
+**Updated**: 2026-06-09
+**Status**: Reference — documents why studio uses BYO LangGraph agents instead of kagent declarative CRDs
 
 ## Summary
 
-Nine kagent declarative agent limitations block end-to-end artifact authoring flows. Six are architectural (missing features), three are operational (bugs/instability). The BYO ADK agent bypasses all architectural gaps.
+Nine kagent declarative agent limitations motivated the decision to use BYO LangGraph agents (see [[byo-langgraph-architecture]]). Gaps #1-6 are architectural limitations of the declarative CRD model. They remain open upstream but are **not blocking** because BYO LangGraph bypasses all of them. Gap #7 is fixed upstream as of kagent v0.9.5.
 
-## Architectural Gaps
+This document is a historical reference explaining the architectural choice, not an active blocker backlog.
+
+## Architectural Gaps (bypassed by BYO LangGraph)
 
 ### 1. No MCP resource reading
 
@@ -15,9 +18,7 @@ Nine kagent declarative agent limitations block end-to-end artifact authoring fl
 
 **Impact**: Agents lack vocabulary and schema context. Knowledge must be hardcoded in skills.
 
-**ADK capability**: `McpToolset(use_mcp_resources=True)` injects `load_mcp_resource` tool.
-
-**Fix complexity**: Easy — config passthrough in `KAgentMcpToolset` + CRD schema addition.
+**BYO status**: Not blocking — LangGraph agents configure MCP clients directly.
 
 **Upstream**: [kagent-dev/kagent#890](https://github.com/kagent-dev/kagent/issues/890)
 
@@ -27,61 +28,47 @@ Nine kagent declarative agent limitations block end-to-end artifact authoring fl
 
 **Impact**: All agent output arrives as chat text. Clients must use regex to extract YAML.
 
-**ADK capability**: `save_artifact` records `artifact_delta` on `EventActions`.
-
-**Fix complexity**: Medium — custom event converter (~50 lines) + artifact service loading.
-
-**Upstream**: No issue filed yet. Template below.
+**BYO status**: Not blocking — LangGraph agents use client-side artifact extraction (ADR 0020).
 
 ### 3. No `before_agent_callback`
 
 **Issue**: Declarative Agent CRD has no field for pre-processing hooks.
 
-**Impact**: Cannot inject MCP resources, validate inputs, or structure context before the LLM runs. Every interaction starts cold.
+**Impact**: Cannot inject MCP resources, validate inputs, or structure context before the LLM runs.
 
-**ADK capability**: `LlmAgent(before_agent_callback=...)` fully supported.
-
-**Fix complexity**: Medium — CRD schema addition + executor wiring.
+**BYO status**: Not blocking — LangGraph graph nodes handle pre-processing.
 
 ### 4. No `after_agent_callback`
 
 **Issue**: Declarative Agent CRD has no field for post-processing hooks.
 
-**Impact**: Cannot validate output, cross-reference check, or gate artifact emission deterministically. The LLM decides whether to validate.
+**Impact**: Cannot validate output, cross-reference check, or gate artifact emission deterministically.
 
-**ADK capability**: `LlmAgent(after_agent_callback=...)` fully supported.
-
-**Fix complexity**: Medium — same as #3.
+**BYO status**: Not blocking — LangGraph graph nodes handle post-processing and validation.
 
 ### 5. No agent chaining / pipeline support
 
 **Issue**: Each Declarative Agent CRD defines a single agent. No DAG, pipeline, or multi-step flow support.
 
-**Impact**: Multi-step flows (threat → control → risk → policy) require manual human bridging between jobs.
+**Impact**: Multi-step flows require manual human bridging between jobs.
 
-**ADK capability**: Sub-agents and sequential agents supported in code.
-
-**Fix complexity**: Hard — requires orchestration model design.
+**BYO status**: Not blocking — LangGraph provides native graph topology (router -> subgraphs).
 
 ### 6. No `before_tool_callback`
 
 **Issue**: Declarative Agent CRD has no field for tool call interception.
 
-**Impact**: Cannot sanitize ClickHouse SQL queries (SQL injection risk), rate-limit tool calls, or gate sensitive operations.
+**Impact**: Cannot sanitize queries, rate-limit tool calls, or gate sensitive operations.
 
-**ADK capability**: `LlmAgent(before_tool_callback=...)` fully supported.
-
-**Fix complexity**: Medium — same pattern as #3/#4.
+**BYO status**: Not blocking — LangGraph tool nodes handle interception.
 
 ## Operational Issues
 
 ### 7. `allowedHeaders` bug in Go runtime
 
-**Issue**: `allowedHeaders` on MCP server config does not propagate request headers in the Go runtime. Works in Python runtime.
+**Issue**: `allowedHeaders` on MCP server config does not propagate request headers in the Go runtime.
 
-**Impact**: GitHub MCP requires a static PAT even when OBO should suffice.
-
-**Status**: Workaround in place (Python runtime + static token fallback).
+**Status**: **Fixed upstream** (kagent v0.9.5). No longer relevant.
 
 ### 8. No per-session MCP resource caching
 
@@ -89,29 +76,10 @@ Nine kagent declarative agent limitations block end-to-end artifact authoring fl
 
 **Impact**: Repeated schema/lexicon fetches waste tokens and add latency.
 
-**Fix complexity**: Medium — session-scoped cache in executor.
+**BYO status**: Not blocking — LangGraph agents can share MCP client instances across graph execution.
 
 ### 9. `gemara-mcp` thread leak (shared deployment)
 
-**Issue**: `gemara-mcp` Go binary leaks OS threads, leading to `newosproc` errors after ~24h.
+**Issue**: `gemara-mcp` Go binary leaks OS threads under shared deployment.
 
-**Impact**: Shared MCP deployment crashes under load.
-
-**Status**: Documented in `docs/decisions/gemara-mcp-session-failures.md`. BYO agent uses sidecar model to isolate.
-
-## Upstream Issue Template
-
-```markdown
-### Feature: [Title]
-
-**Problem**: [One-line description of what's missing]
-
-**ADK support**: [Which ADK API already supports this]
-
-**Proposed change**:
-1. [CRD schema addition]
-2. [Executor wiring]
-3. [Test coverage]
-
-**Reference implementation**: https://github.com/complytime-labs/complytime-core/tree/main/agents/gap-analyst
-```
+**BYO status**: Not blocking — BYO agent uses sidecar model to isolate MCP processes.

@@ -151,11 +151,7 @@ async def list_notifications(request: Request) -> JSONResponse:
 
     async with _notification_store_lock:
         snapshot = list(_notifications)
-    items = (
-        snapshot
-        if not unread_only
-        else [n for n in snapshot if not n[KEY_READ]]
-    )
+    items = snapshot if not unread_only else [n for n in snapshot if not n[KEY_READ]]
     return JSONResponse(items[:limit])
 
 

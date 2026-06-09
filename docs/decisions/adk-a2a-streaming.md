@@ -1,6 +1,6 @@
 # ADK A2A Streaming
 
-**Status:** Resolved
+**Status:** Superseded — studio migrated from ADK to LangGraph (commit `c356dea`)
 **Date:** 2026-04-21
 
 ## Context

@@ -10,7 +10,6 @@ accepts raw SQL arguments. Protects against write operations regardless
 of which MCP server exposes the tool.
 """
 
-
 import logging
 import os
 import re
@@ -29,16 +28,20 @@ _SQL_WRITE = re.compile(
     re.IGNORECASE,
 )
 
-GUARDED_TOOLS = frozenset({
-    "query_database",
-    "query_evidence",
-    "execute_sql",
-    "run_query",
-})
+GUARDED_TOOLS = frozenset(
+    {
+        "query_database",
+        "query_evidence",
+        "execute_sql",
+        "run_query",
+    }
+)
 
 
 @tool
-async def query_evidence(policy_id: str = "", target: str = "", limit: int = 100) -> str:
+async def query_evidence(
+    policy_id: str = "", target: str = "", limit: int = 100
+) -> str:
     """Query evidence records from the gateway, optionally filtered by policy and target."""
     params = {}
     if policy_id:
@@ -145,7 +148,9 @@ async def publish_audit_log(
     draft is attributed to the real user (MCP stays read-only).
     """
     model_name = os.environ.get("MODEL_NAME", "unknown")
-    identity = user_email or os.environ.get("MCP_IDENTITY", "studio-assistant@complytime.dev")
+    identity = user_email or os.environ.get(
+        "MCP_IDENTITY", "studio-assistant@complytime.dev"
+    )
     body = {
         "policy_id": policy_id,
         "content": yaml_content,

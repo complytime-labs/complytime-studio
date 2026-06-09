@@ -16,9 +16,7 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-WORKBENCH_URL = os.environ.get(
-    "WORKBENCH_URL", "http://studio-workbench:8090"
-)
+WORKBENCH_URL = os.environ.get("WORKBENCH_URL", "http://studio-workbench:8090")
 AGENT_ID = os.environ.get("AGENT_ID", "studio-assistant")
 
 _TIMEOUT = 30.0
@@ -104,7 +102,9 @@ async def _call_a2a(url: str, message: str, context: str = "") -> dict:
                         response_parts.append(part.get("text", ""))
 
             return {
-                "data": "\n".join(response_parts) if response_parts else "Empty response"
+                "data": "\n".join(response_parts)
+                if response_parts
+                else "Empty response"
             }
 
     except httpx.TimeoutException:

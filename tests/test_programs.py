@@ -79,9 +79,7 @@ class TestProgramsList:
 
 
 class TestProgramsCreate:
-    async def test_requires_name(
-        self, workbench_client: httpx.AsyncClient
-    ) -> None:
+    async def test_requires_name(self, workbench_client: httpx.AsyncClient) -> None:
         resp = await workbench_client.post(
             "/workbench/programs",
             json={"framework": "fedramp"},
