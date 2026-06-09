@@ -23,8 +23,16 @@ class TestValidateSqlQuery:
     @pytest.mark.parametrize(
         "keyword",
         [
-            "INSERT", "UPDATE", "DELETE", "DROP", "ALTER",
-            "CREATE", "TRUNCATE", "GRANT", "REVOKE", "EXEC",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "DROP",
+            "ALTER",
+            "CREATE",
+            "TRUNCATE",
+            "GRANT",
+            "REVOKE",
+            "EXEC",
         ],
     )
     def test_blocks_write_keywords(self, keyword):
@@ -74,7 +82,9 @@ class TestSqlGuardFilter:
         assert result is None
 
     def test_checks_sql_arg_key(self):
-        result = sql_guard_filter("query_database", {"sql": "INSERT INTO foo VALUES (1)"})
+        result = sql_guard_filter(
+            "query_database", {"sql": "INSERT INTO foo VALUES (1)"}
+        )
         assert result is not None
 
     def test_empty_args(self):

@@ -3,6 +3,8 @@
 Decisions specific to the Studio Workbench (LangGraph agent, A2A protocol, MCP tools).
 Cross-cutting platform decisions live in [complytime-core](https://github.com/complytime-labs/complytime-core/tree/main/docs/decisions).
 
+Use the [ADR template](0000-template.md) when creating new records.
+
 ## Active
 
 | # | Decision | Status | Date |
@@ -13,16 +15,16 @@ Cross-cutting platform decisions live in [complytime-core](https://github.com/co
 | 0030 | [Recommendation Engine Deferred to Workbench](recommendation-engine-deferred.md) | Deferred | 2026-05-14 |
 | 0036 | [Programs Migration to Workbench](programs-migration-to-workbench.md) | Accepted | 2026-05-16 |
 
-## Historical / Obsolete
+## Reference
 
-| # | Decision | Status | Date |
-|:--|:--|:--|:--|
-| 0017 | [Kagent Declarative Agent Gap Catalog](kagent-gap-catalog.md) | Obsolete — agents run in workbench, not kagent | 2026-04-18 |
-| 0019 | [ADK Empty Messages Workaround](adk-empty-messages-workaround.md) | Obsolete — replaced by LangGraph | 2026-04-19 |
+| Decision | Status | Date |
+|:--|:--|:--|
+| [Kagent Declarative Agent Gap Catalog](kagent-gap-catalog.md) | Reference — explains BYO LangGraph choice | 2026-04-18 |
 
 ## Superseded / Resolved
 
 | Decision | Status |
 |:--|:--|
-| [ADK A2A Streaming](adk-a2a-streaming.md) | Resolved |
+| [ADK A2A Streaming](adk-a2a-streaming.md) | Superseded — replaced by LangGraph |
+| [ADK Empty Messages Workaround](adk-empty-messages-workaround.md) | Superseded — replaced by LangGraph |
 | [Agent Trust Model](trust-model-deferred.md) | Rejected for v1 |

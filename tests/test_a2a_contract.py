@@ -19,7 +19,9 @@ AGENT_URL = os.environ.get("AGENT_URL", "")
 
 pytestmark = [
     pytest.mark.asyncio,
-    pytest.mark.skipif(not AGENT_URL, reason="AGENT_URL not set — skipping live A2A tests"),
+    pytest.mark.skipif(
+        not AGENT_URL, reason="AGENT_URL not set — skipping live A2A tests"
+    ),
 ]
 
 REQUIRED_AGENT_CARD_FIELDS = {"name", "url", "version", "capabilities", "skills"}

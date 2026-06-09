@@ -16,7 +16,11 @@ class TestLoadSystemPrompt:
         skills_dir.mkdir(parents=True)
         (skills_dir / "SKILL.md").write_text("# Audit Skill")
 
-        with patch.object(prompt_module, "_load_base_prompt", return_value="You are a compliance assistant."):
+        with patch.object(
+            prompt_module,
+            "_load_base_prompt",
+            return_value="You are a compliance assistant.",
+        ):
             with patch.object(prompt_module, "SKILLS_DIR", tmp_path / "skills"):
                 with patch.object(prompt_module, "FEW_SHOT_DIR", Path("/nonexistent")):
                     result = prompt_module.load_system_prompt()
@@ -27,14 +31,20 @@ class TestLoadSystemPrompt:
     def test_empty_when_no_files(self, tmp_path):
         with patch.object(prompt_module, "_load_base_prompt", return_value=""):
             with patch.object(prompt_module, "_load_skills", return_value=""):
-                with patch.object(prompt_module, "_load_few_shot_examples", return_value=""):
+                with patch.object(
+                    prompt_module, "_load_few_shot_examples", return_value=""
+                ):
                     result = prompt_module.load_system_prompt()
                     assert result == ""
 
     def test_base_prompt_only(self):
-        with patch.object(prompt_module, "_load_base_prompt", return_value="Base prompt here."):
+        with patch.object(
+            prompt_module, "_load_base_prompt", return_value="Base prompt here."
+        ):
             with patch.object(prompt_module, "_load_skills", return_value=""):
-                with patch.object(prompt_module, "_load_few_shot_examples", return_value=""):
+                with patch.object(
+                    prompt_module, "_load_few_shot_examples", return_value=""
+                ):
                     result = prompt_module.load_system_prompt()
                     assert result == "Base prompt here."
 
@@ -77,8 +87,16 @@ class TestLoadFewShotExamples:
         few_shot_dir = tmp_path / "few-shot"
         few_shot_dir.mkdir()
         examples = [
-            {"scenario": "Pass with evidence", "classification": "Observation", "reasoning": "All checks pass"},
-            {"scenario": "Missing attestation", "classification": "Finding", "reasoning": "No proof"},
+            {
+                "scenario": "Pass with evidence",
+                "classification": "Observation",
+                "reasoning": "All checks pass",
+            },
+            {
+                "scenario": "Missing attestation",
+                "classification": "Finding",
+                "reasoning": "No proof",
+            },
         ]
         (few_shot_dir / "audit.yaml").write_text(yaml.dump(examples))
 
@@ -95,7 +113,15 @@ class TestLoadFewShotExamples:
         few_shot_dir.mkdir()
         (few_shot_dir / "bad.yaml").write_text("{{invalid: yaml: [")
         (few_shot_dir / "good.yaml").write_text(
-            yaml.dump([{"scenario": "Valid one", "classification": "Observation", "reasoning": "OK"}])
+            yaml.dump(
+                [
+                    {
+                        "scenario": "Valid one",
+                        "classification": "Observation",
+                        "reasoning": "OK",
+                    }
+                ]
+            )
         )
 
         with patch.object(prompt_module, "FEW_SHOT_DIR", few_shot_dir):

@@ -13,7 +13,10 @@ class TestClassifyIntent:
         assert classify_intent("Run An Audit on my policy") == "audit_production"
 
     def test_audit_keyword_substring(self):
-        assert classify_intent("I want to generate audit results for ampel") == "audit_production"
+        assert (
+            classify_intent("I want to generate audit results for ampel")
+            == "audit_production"
+        )
 
     def test_posture_keyword_exact(self):
         assert classify_intent("posture") == "posture_check"
@@ -22,7 +25,10 @@ class TestClassifyIntent:
         assert classify_intent("How Ready are we for the audit?") == "posture_check"
 
     def test_posture_keyword_substring(self):
-        assert classify_intent("Check the evidence quality for my policy") == "posture_check"
+        assert (
+            classify_intent("Check the evidence quality for my policy")
+            == "posture_check"
+        )
 
     def test_ambiguous_no_match(self):
         assert classify_intent("hello there") == ""
@@ -35,11 +41,15 @@ class TestClassifyIntent:
 
     def test_all_audit_keywords_match(self):
         for kw in AUDIT_KEYWORDS:
-            assert classify_intent(f"please {kw} now") == "audit_production", f"Failed for: {kw}"
+            assert classify_intent(f"please {kw} now") == "audit_production", (
+                f"Failed for: {kw}"
+            )
 
     def test_all_posture_keywords_match(self):
         for kw in POSTURE_KEYWORDS:
-            assert classify_intent(f"tell me about {kw}") == "posture_check", f"Failed for: {kw}"
+            assert classify_intent(f"tell me about {kw}") == "posture_check", (
+                f"Failed for: {kw}"
+            )
 
 
 class TestRouterNode:

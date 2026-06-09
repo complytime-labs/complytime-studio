@@ -8,7 +8,11 @@ import uuid
 import httpx
 import pytest
 
-from workbench.notifications import Notification, clear_notification_store_for_tests, seed_notification
+from workbench.notifications import (
+    Notification,
+    clear_notification_store_for_tests,
+    seed_notification,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -22,7 +26,9 @@ def _notification_test_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestNotificationsList:
-    async def test_list_empty_initially(self, workbench_client: httpx.AsyncClient) -> None:
+    async def test_list_empty_initially(
+        self, workbench_client: httpx.AsyncClient
+    ) -> None:
         resp = await workbench_client.get("/workbench/notifications")
         assert resp.status_code == 200
         assert resp.json() == []
@@ -52,7 +58,9 @@ class TestNotificationsList:
 
 
 class TestUnreadCount:
-    async def test_unread_count_zero_initially(self, workbench_client: httpx.AsyncClient) -> None:
+    async def test_unread_count_zero_initially(
+        self, workbench_client: httpx.AsyncClient
+    ) -> None:
         resp = await workbench_client.get("/workbench/notifications/unread-count")
         assert resp.status_code == 200
         assert resp.json() == {"count": 0}

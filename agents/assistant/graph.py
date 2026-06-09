@@ -95,37 +95,53 @@ def _build_checkpointer():
     return KAgentCheckpointer(client=client, app_name=AGENT_ID)
 
 
-def _build_audit_subgraph(model, mcp_servers: dict, system_prompt: str) -> StateGraph:
-    """Build the audit production subgraph with verification harness."""
-    local_tools = build_tools()
+def _make_tools_provider(mcp_servers: dict, local_tools: list):
+    """Create a lazy, cached tool list provider shared across nodes."""
+    _cached = None
+
+    async def get_tools():
+        nonlocal _cached
+        if _cached is None:
+            _cached = list(local_tools)
+            if mcp_servers:
+                client = MultiServerMCPClient(mcp_servers)
+                mcp_tools = await client.get_tools()
+                _cached = _cached + mcp_tools
+        return _cached
+
+    return get_tools
+
+
+def _make_agent_node(model, get_tools, system_prompt: str, *, inject_worker_data=False):
+    """Create an LLM reasoning node that uses shared tools."""
 
     async def agent_node(state: AuditState, config):
-        """LLM reasoning node — tool selection and draft generation."""
         import json as _json
 
         messages = state["messages"]
-        system_messages = [{"role": "system", "content": system_prompt}]
+        prompt = system_prompt
 
-        worker_data = state.get("worker_data", {})
-        if worker_data:
-            data_context = (
-                f"\n\n--- Worker Data (reference only) ---\n"
-                f"{_json.dumps(worker_data, indent=2)}"
-            )
-            system_messages[0]["content"] += data_context
+        if inject_worker_data:
+            worker_data = state.get("worker_data", {})
+            if worker_data:
+                prompt += (
+                    f"\n\n--- Worker Data (reference only) ---\n"
+                    f"{_json.dumps(worker_data, indent=2)}"
+                )
 
-        tools_for_model = list(local_tools)
-        if mcp_servers:
-            client = MultiServerMCPClient(mcp_servers)
-            mcp_tools = await client.get_tools()
-            tools_for_model = tools_for_model + mcp_tools
-
-        bound_model = model.bind_tools(tools_for_model)
+        system_messages = [{"role": "system", "content": prompt}]
+        tools = await get_tools()
+        bound_model = model.bind_tools(tools)
         response = await bound_model.ainvoke(system_messages + list(messages))
         return {"messages": [response]}
 
+    return agent_node
+
+
+def _make_tool_node(get_tools):
+    """Create a tool execution node with SQL write guard and shared tools."""
+
     async def tool_node_fn(state: AuditState, config):
-        """Execute tool calls with SQL write guard."""
         last_msg = state["messages"][-1]
         if hasattr(last_msg, "tool_calls"):
             for tc in last_msg.tool_calls:
@@ -142,13 +158,20 @@ def _build_audit_subgraph(model, mcp_servers: dict, system_prompt: str) -> State
                         ]
                     }
 
-        tools_for_node = list(local_tools)
-        if mcp_servers:
-            client = MultiServerMCPClient(mcp_servers)
-            mcp_tools = await client.get_tools()
-            tools_for_node = tools_for_node + mcp_tools
-        node = ToolNode(tools_for_node, handle_tool_errors=True)
+        tools = await get_tools()
+        node = ToolNode(tools, handle_tool_errors=True)
         return await node.ainvoke(state, config)
+
+    return tool_node_fn
+
+
+def _build_audit_subgraph(model, mcp_servers: dict, system_prompt: str) -> StateGraph:
+    """Build the audit production subgraph with verification harness."""
+    get_tools = _make_tools_provider(mcp_servers, build_tools())
+    agent_node = _make_agent_node(
+        model, get_tools, system_prompt, inject_worker_data=True
+    )
+    tool_node_fn = _make_tool_node(get_tools)
 
     def should_use_tool(state: AuditState):
         last = state["messages"][-1]
@@ -194,52 +217,11 @@ def _build_audit_subgraph(model, mcp_servers: dict, system_prompt: str) -> State
     return builder
 
 
-def _build_posture_subgraph(
-    model, mcp_servers: dict, system_prompt: str
-) -> StateGraph:
+def _build_posture_subgraph(model, mcp_servers: dict, system_prompt: str) -> StateGraph:
     """Build the posture check subgraph — no publish path."""
-    local_tools = build_tools()
-
-    async def agent_node(state: AuditState, config):
-        """LLM reasoning node for posture checks."""
-        messages = state["messages"]
-        system_messages = [{"role": "system", "content": system_prompt}]
-
-        tools_for_model = list(local_tools)
-        if mcp_servers:
-            client = MultiServerMCPClient(mcp_servers)
-            mcp_tools = await client.get_tools()
-            tools_for_model = tools_for_model + mcp_tools
-
-        bound_model = model.bind_tools(tools_for_model)
-        response = await bound_model.ainvoke(system_messages + list(messages))
-        return {"messages": [response]}
-
-    async def tool_node_fn(state: AuditState, config):
-        """Execute tool calls with SQL write guard."""
-        last_msg = state["messages"][-1]
-        if hasattr(last_msg, "tool_calls"):
-            for tc in last_msg.tool_calls:
-                blocked = sql_guard_filter(tc.get("name", ""), tc.get("args", {}))
-                if blocked:
-                    from langchain_core.messages import ToolMessage
-
-                    return {
-                        "messages": [
-                            ToolMessage(
-                                content=str(blocked),
-                                tool_call_id=tc.get("id", ""),
-                            )
-                        ]
-                    }
-
-        tools_for_node = list(local_tools)
-        if mcp_servers:
-            client = MultiServerMCPClient(mcp_servers)
-            mcp_tools = await client.get_tools()
-            tools_for_node = tools_for_node + mcp_tools
-        node = ToolNode(tools_for_node, handle_tool_errors=True)
-        return await node.ainvoke(state, config)
+    get_tools = _make_tools_provider(mcp_servers, build_tools())
+    agent_node = _make_agent_node(model, get_tools, system_prompt)
+    tool_node_fn = _make_tool_node(get_tools)
 
     def should_use_tool(state: AuditState):
         last = state["messages"][-1]

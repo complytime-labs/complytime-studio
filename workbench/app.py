@@ -75,9 +75,7 @@ async def a2a_proxy(request: Request) -> StreamingResponse | JSONResponse:
     agent_name = request.path_params["name"]
     agent_url = _resolve_agent_url(agent_name)
     if not agent_url:
-        return JSONResponse(
-            {"error": f"unknown agent: {agent_name}"}, status_code=403
-        )
+        return JSONResponse({"error": f"unknown agent: {agent_name}"}, status_code=403)
 
     body = await request.body()
     headers = {
@@ -100,6 +98,7 @@ async def a2a_proxy(request: Request) -> StreamingResponse | JSONResponse:
 
         content_type = upstream_resp.headers.get("content-type", "")
         if "text/event-stream" in content_type:
+
             async def stream_sse():
                 try:
                     async for chunk in upstream_resp.aiter_bytes():
@@ -149,9 +148,7 @@ async def chat_put(request: Request) -> JSONResponse:
 async def validate_artifact(request: Request) -> JSONResponse:
     """Proxy to gemara-mcp validate_gemara_artifact."""
     if not GEMARA_MCP_URL:
-        return JSONResponse(
-            {"error": "gemara-mcp unavailable"}, status_code=503
-        )
+        return JSONResponse({"error": "gemara-mcp unavailable"}, status_code=503)
     body = await request.json()
     artifact_content = body.get("yaml", "")
     definition = body.get("definition", "")
@@ -282,7 +279,9 @@ async def risk_severity(request: Request) -> JSONResponse:
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             risks_resp, ct_resp, rt_resp = await asyncio.gather(
-                client.get(f"{gw}/api/risks", params={"policy_id": policy_id}, headers=headers),
+                client.get(
+                    f"{gw}/api/risks", params={"policy_id": policy_id}, headers=headers
+                ),
                 client.get(f"{gw}/api/control-threats", headers=headers),
                 client.get(f"{gw}/api/risk-threats", headers=headers),
             )
@@ -304,7 +303,10 @@ async def risk_severity(request: Request) -> JSONResponse:
         severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1}
         control_agg: dict[str, dict] = {}
         for ct in control_threats:
-            threat_key = (ct.get("threat_reference_id", ""), ct.get("threat_entry_id", ""))
+            threat_key = (
+                ct.get("threat_reference_id", ""),
+                ct.get("threat_entry_id", ""),
+            )
             cid = ct.get("control_id", "")
             if not cid:
                 continue
@@ -314,9 +316,16 @@ async def risk_severity(request: Request) -> JSONResponse:
                 if not sev:
                     continue
                 if cid not in control_agg:
-                    control_agg[cid] = {"control_id": cid, "max_severity": sev, "risk_count": 0, "_risk_ids": set()}
+                    control_agg[cid] = {
+                        "control_id": cid,
+                        "max_severity": sev,
+                        "risk_count": 0,
+                        "_risk_ids": set(),
+                    }
                 entry = control_agg[cid]
-                if severity_order.get(sev.lower(), 0) > severity_order.get(entry["max_severity"].lower(), 0):
+                if severity_order.get(sev.lower(), 0) > severity_order.get(
+                    entry["max_severity"].lower(), 0
+                ):
                     entry["max_severity"] = sev
                 rid = risk.get("risk_id", "")
                 if rid not in entry["_risk_ids"]:
@@ -339,9 +348,7 @@ async def risk_severity(request: Request) -> JSONResponse:
 async def migrate_artifact(request: Request) -> JSONResponse:
     """Proxy to gemara-mcp migrate_gemara_artifact."""
     if not GEMARA_MCP_URL:
-        return JSONResponse(
-            {"error": "gemara-mcp unavailable"}, status_code=503
-        )
+        return JSONResponse({"error": "gemara-mcp unavailable"}, status_code=503)
     body = await request.json()
     args: dict = {"artifact_content": body.get("yaml", "")}
     if body.get("artifact_type"):
@@ -366,20 +373,6 @@ async def migrate_artifact(request: Request) -> JSONResponse:
         return JSONResponse({"error": str(e)}, status_code=502)
 
 
-async def publish_bundle(request: Request) -> JSONResponse:
-    """Stub: OCI publish deferred (oras-mcp removed per ADR 0041)."""
-    return JSONResponse(
-        {"error": "publish not yet implemented"}, status_code=501
-    )
-
-
-async def registry_repositories(request: Request) -> JSONResponse:
-    """Stub: OCI registry browse deferred (oras-mcp removed per ADR 0041)."""
-    return JSONResponse(
-        {"error": "registry browse not yet implemented"}, status_code=501
-    )
-
-
 async def recommendations_stub(request: Request) -> JSONResponse:
     """Stub: recommendation engine deferred (ADR #0030)."""
     return JSONResponse([], status_code=200)
@@ -394,13 +387,13 @@ async def recommendation_action_stub(request: Request) -> JSONResponse:
 
 workbench_routes = [
     Route("/agents", agent_directory, methods=["GET"]),
-    Route("/a2a/{name:path}", a2a_proxy, methods=["GET", "POST", "PUT", "PATCH", "DELETE"]),
+    Route(
+        "/a2a/{name:path}", a2a_proxy, methods=["GET", "POST", "PUT", "PATCH", "DELETE"]
+    ),
     Route("/chat/history", chat_get, methods=["GET"]),
     Route("/chat/history", chat_put, methods=["PUT"]),
     Route("/validate", validate_artifact, methods=["POST"]),
     Route("/migrate", migrate_artifact, methods=["POST"]),
-    Route("/publish", publish_bundle, methods=["POST"]),
-    Route("/registry/repositories", registry_repositories, methods=["GET"]),
     Route("/posture", posture_summary, methods=["GET"]),
     Route("/risks/severity", risk_severity, methods=["GET"]),
     Route("/programs", list_programs, methods=["GET"]),
@@ -408,8 +401,16 @@ workbench_routes = [
     Route("/programs/{id}", get_program, methods=["GET"]),
     Route("/programs/{id}", update_program, methods=["PUT"]),
     Route("/programs/{id}", delete_program, methods=["DELETE"]),
-    Route("/programs/{id}/recommendations/{policy_id}/attach", recommendation_action_stub, methods=["POST"]),
-    Route("/programs/{id}/recommendations/{policy_id}/dismiss", recommendation_action_stub, methods=["POST"]),
+    Route(
+        "/programs/{id}/recommendations/{policy_id}/attach",
+        recommendation_action_stub,
+        methods=["POST"],
+    ),
+    Route(
+        "/programs/{id}/recommendations/{policy_id}/dismiss",
+        recommendation_action_stub,
+        methods=["POST"],
+    ),
     Route("/programs/{id}/recommendations", recommendations_stub, methods=["GET"]),
     Route("/notifications/unread-count", unread_count, methods=["GET"]),
     Route("/notifications/{id}/read", mark_read, methods=["PATCH"]),

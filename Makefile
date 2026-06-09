@@ -23,7 +23,8 @@ test-integration: ## Run A2A contract tests against a live agent (AGENT_URL requ
 	AGENT_URL=$${AGENT_URL:-http://localhost:8080} python -m pytest tests/test_a2a_contract.py -v
 
 lint:
-	cd agents/assistant && python -m mypy --ignore-missing-imports .
+	ruff check agents/assistant/ workbench/ tests/
+	ruff format --check agents/assistant/ workbench/ tests/
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
